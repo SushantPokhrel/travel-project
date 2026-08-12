@@ -1,0 +1,21 @@
+{
+  "name": "travel-project",
+  "version": "1.0.0",
+  "description": "THIS IS OUR TRAVEL GUIDE PROJECT \r SUSHANT \r SUSHANT\r AAYUSH",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SushantPokhrel/travel-project.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/SushantPokhrel/travel-project/issues"
+  },
+  "homepage": "https://github.com/SushantPokhrel/travel-project#readme"
+}
