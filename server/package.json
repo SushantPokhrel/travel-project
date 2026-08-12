@@ -1,7 +1,7 @@
 {
   "name": "travel-project",
   "version": "1.0.0",
-  "description": "THIS IS OUR TRAVEL GUIDE PROJECT \r SUSHANT \r SUSHANT\r AAYUSH",
+  "description": "THIS IS OUR TRAVEL GUIDE PROJECT",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
