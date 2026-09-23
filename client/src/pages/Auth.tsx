@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { ToastContainer, toast } from "react-toastify";
 import { GoogleLogin } from "@react-oauth/google";
 import guideNepalLogo from "@/assets/guideNepal_logo.jpg";
@@ -9,8 +9,7 @@ import { Spinner } from "../../@/components/ui/spinner";
 
 export default function Auth() {
   const setUser = useStore((state) => state.setUser);
-  const userLoader = useStore((state) => state.userLoader);
-
+  const navigate = useNavigate();
   const handleGoogleSuccess = async (
     credentialResponse: CredentialResponseType,
   ) => {
@@ -21,6 +20,9 @@ export default function Auth() {
       >("/auth/google/sign-in", credentialResponse);
       setUser(userData?.user);
       toast.success(userData?.message || "Signed in successfully!");
+      return userData?.user.role === "pending"
+        ? navigate("/onboarding")
+        : navigate(`/dashboard`);
     } catch (error) {
       console.error("Authentication error:", error);
       toast.error("Failed to authenticate. Please try again.");
@@ -31,9 +33,7 @@ export default function Auth() {
     console.error("Login Failed");
     toast.error("Google sign-in failed. Please try again!");
   };
-  if (userLoader) {
-    return <Spinner />;
-  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-body-bg py-12 px-5 lg:px-8">
       <div className="w-full max-w-md space-y-8 rounded-lg bg-surface text-text-para p-8 shadow-sm text-center flex flex-col items-center">

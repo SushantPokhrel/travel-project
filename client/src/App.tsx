@@ -5,7 +5,7 @@ import type { LoginResponseType } from "./lib/types";
 import { useStore } from "./store/useStore";
 function App() {
   const setUser = useStore((state) => state.setUser);
-  const userLoader = useStore((state) => state.userLoader);
+  // const userLoader = useStore((state) => state.userLoader);
   const setUserLoader = useStore((state) => state.setUserLoader);
   useEffect(() => {
     fetchUser<LoginResponseType>()

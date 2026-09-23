@@ -7,9 +7,7 @@ console.log(User)
   return (
     <>
       <Landing />
-      <div>
-        hi {User?.username}
-      </div>
+      
     </>
   );
 }

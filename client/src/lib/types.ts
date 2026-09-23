@@ -17,6 +17,11 @@ export type User = {
   email: string;
   role: "admin" | "tourist" | "guide" | "pending";
   id: string;
+  phone?: string;
+  profileImg?: string;
+  verificationDocument?: string;
+  isActive?: boolean;
+  verificationStatus?: "not_submitted" | "pending" | "verified" | "rejected";
 };
 export type LoginResponseType = {
   message: string;
