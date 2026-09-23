@@ -1,15 +1,22 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="/src/index.css" rel="stylesheet" />
 
-    <title>client</title>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/guide-nepal-logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   
+
+    <title>GuideNepal | travel guide</title>
+    <script>
+      if (localStorage.getItem("theme") === "dark") {
+        document.documentElement.classList.add("dark");
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root" class="bg-body-bg text-text-para"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

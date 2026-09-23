@@ -1,17 +1,24 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
-
+import { useEffect } from "react";
+import AppRoutes from "./routes/AppRoutes";
+import { fetchUser } from "./lib/api";
+import type { LoginResponseType } from "./lib/types";
+import { useStore } from "./store/useStore";
 function App() {
-  const [count, setCount] = useState(0)
+  const setUser = useStore((state) => state.setUser);
+  const userLoader = useStore((state) => state.userLoader);
+  const setUserLoader = useStore((state) => state.setUserLoader);
+  useEffect(() => {
+    fetchUser<LoginResponseType>()
+      .then((resData) => {
+        setUser(resData.user);
+      })
+      .catch((e) => console.log(e.message))
+      .finally(() => {
+        setUserLoader(false);
+      });
+  }, []);
 
-  return (
-    <>
-      <h1 className='text-3xl text-cyan-400 text-center m-20'>MESSIII</h1>
-    </>
-  )
+  return <AppRoutes />;
 }
 
-export default App
+export default App;

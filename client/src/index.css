@@ -1,1 +1,46 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist:ital,wght@0,100..900;1,100..900&family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap");
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+:root {
+  --primary: #0d5c75;
+  --primary-foreground: #ffffff;
+  --secondary: oklch(82.8% 0.189 84.429);
+  --secondary-foreground: #3f320f;
+  --bg-main: #f8fafc;
+  --bg-surface: #ffffff;
+  --border-gray: #d1d5dc;
+  --text-para: #1f2937;
+  --text-header: #111827;
+  --text-muted: #64748b;
+}
+
+.dark {
+  --primary: #35a4c7;
+  --primary-foreground: #062a35;
+  --secondary: oklch(78% 0.16 80);
+  --secondary-foreground: #1c1917;
+  --bg-main: #0c1016;
+  --bg-surface: #151c25;
+  --border-gray: #26303c;
+  --text-para: #e2e8f0;
+  --text-header: #f8fafc;
+  --text-muted: #94a3b8;
+}
+@theme {
+  --font-sans: "Roboto Mono", monospace;
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-body-bg: var(--bg-main);
+  --color-surface: var(--bg-surface);
+  --breakpoint-lg: 1060px;
+  --color-text-para: var(--text-para);
+  --color-text-header: var(--text-header);
+  --color-text-muted: var(--text-muted);
+  --color-gray-1: var(--border-gray);
+}
+body {
+  background-color: var(--bg-main);
+  color: var(--text-para);
+}
