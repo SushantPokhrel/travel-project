@@ -11,7 +11,15 @@ const verifyToken = async (req, res, next) => {
     // console.log(decoded);
     //current user from db
     const currentUser = await userModel.findOne({ googleId: decoded.googleId });
-    if (!currentUser.isActive) {
+    if (!currentUser) {
+      return res.status(401).json({ message: "User account not found" });
+    }
+    const canAccessWhileAwaitingVerification =
+      currentUser.role === "guide" &&
+      ["pending", "rejected"].includes(
+        currentUser.guideProfile?.verificationStatus,
+      );
+    if (!currentUser.isActive && !canAccessWhileAwaitingVerification) {
       return res.status(403).json({
         message:
           "Your account has been suspended or deactivated. Please contact an administrator.",
@@ -40,4 +48,4 @@ const restrictTo = (...roles) => {
     return next();
   };
 };
-module.exports = { verifyToken };
+module.exports = { verifyToken, restrictTo };
