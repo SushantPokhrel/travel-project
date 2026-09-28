@@ -15,6 +15,7 @@ import Guides from "@/pages/Guides";
 import TravelDesk from "@/pages/TravelDesk";
 import AdminManageUsers from "@/pages/AdminManageUsers";
 import AdminVerifications from "@/pages/AdminVerifications";
+import AdminRoutes from "./AdminRoutes";
 export default function AppRoutes() {
   return (
     <>
@@ -38,8 +39,13 @@ export default function AppRoutes() {
                 <Route path=":username/:userid" element={<DashboardIndex />} />
                 <Route path="settings" element={<DashboardSettings />} />
                 <Route path="travel-desk" element={<TravelDesk />} />
-                <Route path="manage-users" element={<AdminManageUsers />} />
-                <Route path="verifications" element={<AdminVerifications />} />
+                <Route element={<AdminRoutes />}>
+                  <Route path="manage-users" element={<AdminManageUsers />} />
+                  <Route
+                    path="verifications"
+                    element={<AdminVerifications />}
+                  />
+                </Route>
               </Route>
             </Route>
           </Routes>

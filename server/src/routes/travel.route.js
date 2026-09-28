@@ -14,14 +14,13 @@ const withUsers = (query) =>
     .populate("guide", "username email profileImg guideProfile");
 
 router.get("/guides", async (req, res) => {
+  console.log("guides route logged");
   const guides = await User.find({
     role: "guide",
-    isActive: true,
     "guideProfile.verificationStatus": "verified",
-  })
-    .select("username email phone profileImg guideProfile")
-    .sort({ "guideProfile.rating": -1 });
-  res.json({ guides });
+  }).select("username email phone profileImg guideProfile");
+  console.log(guides);
+  res.json({ message: "Guides fetched successfully", guides });
 });
 
 router.post(
@@ -58,14 +57,12 @@ router.post(
 );
 
 router.get("/requests", verifyToken, async (req, res) => {
-  const filter =
-    req.user.role === "tourist"
-      ? { tourist: req.user._id }
-      : { status: { $in: ["open", "offered"] } };
   const requests = await withUsers(
-    TravelRequest.find(filter).sort({ createdAt: -1 }),
+    TravelRequest.find({ status: { $in: ["open", "offered"] } }).sort({
+      createdAt: -1,
+    }),
   );
-  res.json({ requests });
+  res.json({ message: "travel requests fetched successfully", requests });
 });
 
 router.post(
@@ -97,10 +94,13 @@ router.post(
 );
 
 router.get("/offers", verifyToken, async (req, res) => {
-  const filter =
-    req.user.role === "guide"
-      ? { guide: req.user._id }
-      : { tourist: req.user._id };
+  let filter = { guide: req.user._id };
+  if (req.user.role === "tourist") {
+    const requests = await TravelRequest.find({ tourist: req.user._id }).select(
+      "_id",
+    );
+    filter = { request: { $in: requests.map((request) => request._id) } };
+  }
   const offers = await Offer.find(filter)
     .populate({
       path: "request",
@@ -124,7 +124,7 @@ router.post(
     const request = await TravelRequest.findById(req.params.requestId);
     if (!request || !["open", "offered"].includes(request.status))
       return res.status(404).json({ message: "Open request not found" });
-    const { price, message } = req.body;
+    const { price, message = "" } = req.body;
     if (price === undefined)
       return res.status(400).json({ message: "Offer price is required" });
     try {
@@ -136,7 +136,7 @@ router.post(
       });
       request.status = "offered";
       await request.save();
-      res.status(201).json({ offer });
+      res.status(201).json({ message: "offer posted successfully", offer });
     } catch (error) {
       if (error.code === 11000)
         return res

@@ -105,15 +105,14 @@ export default function Guides() {
       try {
         setLoading(true);
         // GET /users endpoint via helper
-        const response = await fetchData<{ users?: GuideUser[]; message?: string }>("/users");
+        const response = await fetchData<{ guides: GuideUser[]; message: string }>("/travel/guides");
         
-        const fetchedUsers = response?.users || [];
+        const fetchedUsers = response.guides || [];
+        console.log(fetchedUsers)
         
         // Filter only users with "guide" role from API
-        const apiGuides = fetchedUsers.filter(
-          (u) => u.role?.toLowerCase() === "guide"
-        );
-
+        const apiGuides = fetchedUsers
+console.log(apiGuides)
         // Combine API guides with Mock guides (avoiding duplicates)
         const combinedGuides = [...apiGuides];
 

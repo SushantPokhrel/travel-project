@@ -135,7 +135,7 @@ export default function DashboardIndex() {
               Account Status
             </p>
             <p className="text-base font-semibold text-foreground">
-              Verified & Active
+              {user?.role == "guide" ? user?.verificationStatus : "Active"}
             </p>
           </div>
         </div>
@@ -148,7 +148,10 @@ export default function DashboardIndex() {
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Identity Document
             </p>
-            <p className="text-base font-semibold text-foreground">Approved</p>
+            <p className="text-base font-semibold text-foreground">
+              {" "}
+              {user?.role == "guide" ? user?.verificationStatus : "Active"}
+            </p>
           </div>
         </div>
 
@@ -241,13 +244,11 @@ export default function DashboardIndex() {
                       <p className="text-sm font-medium">
                         Citizenship / Identity Document
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        Verified on Jan 15, 2024
-                      </p>
+                      
                     </div>
                   </div>
                   <Badge className="bg-emerald-100 text-emerald-700">
-                    Verified
+                    {user.verificationStatus}
                   </Badge>
                 </div>
               </div>

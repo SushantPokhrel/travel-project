@@ -75,7 +75,7 @@ export default function TravelDesk() {
     specialties: "",
     pricePerDay: "",
   });
-  const [offerPrices, setOfferPrices] = useState<Record<string, string>>({});
+  const [offerPrice, setOfferPrice] = useState<number | string>("");
 
   const refresh = async () => {
     try {
@@ -170,6 +170,7 @@ export default function TravelDesk() {
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
+  console.log(requests);
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
       <div>
@@ -310,26 +311,33 @@ export default function TravelDesk() {
                 key={offer._id}
               >
                 <span>
-                  <b>{offer.guide?.username}</b> offered ${offer.price} for{" "}
+                  <b>{offer.guide?.username}</b> offered NPR {offer.price} for{" "}
                   {offer.request?.destination}
                 </span>
-                {offer.status === "pending" && (
-                  <Button
-                    onClick={() =>
-                      run(async () => {
-                        await call(
-                          `/travel/offers/${offer._id}/accept`,
-                          "POST",
-                        );
-                        setMessage(
-                          "Offer accepted. Complete mock payment below.",
-                        );
-                      })
-                    }
-                  >
-                    Accept offer
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {offer.status === "pending" && (
+                    <Button
+                      onClick={() =>
+                        run(async () => {
+                          await call(
+                            `/travel/offers/${offer._id}/accept`,
+                            "POST",
+                          );
+                          setMessage(
+                            "Offer accepted. Complete mock payment below.",
+                          );
+                        })
+                      }
+                    >
+                      Accept offer
+                    </Button>
+                  )}
+                  {offer.status !== "pending" && (
+                    <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium capitalize">
+                      {offer.status}
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
             {bookings.map((booking) => (
@@ -455,7 +463,8 @@ export default function TravelDesk() {
               >
                 <span>
                   <b>{request.destination}</b> · {request.travelers} traveler(s)
-                  · {request.startDate.slice(0, 10)}
+                  · {request.startDate.slice(0, 10)} · {request.status} · NPR{" "}
+                  {request.budget}
                 </span>
                 <div className="flex gap-2">
                   <input
@@ -463,13 +472,10 @@ export default function TravelDesk() {
                     type="number"
                     min="0"
                     placeholder="Your price"
-                    value={offerPrices[request._id] || ""}
-                    onChange={(e) =>
-                      setOfferPrices({
-                        ...offerPrices,
-                        [request._id]: e.target.value,
-                      })
-                    }
+                    value={offerPrice || ""}
+                    onChange={(e) => {
+                      setOfferPrice(e.target.valueAsNumber);
+                    }}
                   />
                   <Button
                     onClick={() =>
@@ -477,7 +483,7 @@ export default function TravelDesk() {
                         await call(
                           `/travel/requests/${request._id}/offers`,
                           "POST",
-                          { price: Number(offerPrices[request._id]) },
+                          { price: offerPrice },
                         );
                         setMessage("Offer submitted");
                       })

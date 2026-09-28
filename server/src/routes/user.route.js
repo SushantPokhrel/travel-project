@@ -207,7 +207,7 @@ router.post(
   },
 );
 router.get("/me", verifyToken, (req, res) => {
-  console.log("hi from /me route", req.user);
+  // console.log("hi from /me route", req.user);
   const {
     email,
     _id,
