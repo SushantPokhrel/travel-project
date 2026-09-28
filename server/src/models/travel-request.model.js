@@ -8,6 +8,7 @@ const travelRequestSchema = new mongoose.Schema(
       required: true,
     },
     guide: { type: mongoose.Schema.Types.ObjectId, ref: "user" },
+    isPrivate: { type: Boolean, default: false },
     destination: { type: String, required: true, trim: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
@@ -16,7 +17,7 @@ const travelRequestSchema = new mongoose.Schema(
     details: { type: String, trim: true },
     status: {
       type: String,
-      enum: ["open", "offered", "booked", "completed", "cancelled"],
+      enum: ["open", "offered", "accepted", "booked", "completed", "cancelled"],
       default: "open",
     },
   },

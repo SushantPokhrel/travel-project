@@ -27,6 +27,8 @@ type Request = {
   details?: string;
   status: string;
   tourist?: Guide;
+  guide?: Guide;
+  isPrivate?: boolean;
 };
 type Offer = {
   _id: string;
@@ -55,6 +57,7 @@ export default function TravelDesk() {
   const user = useStore((state) => state.user);
   const [guides, setGuides] = useState<Guide[]>([]);
   const [requests, setRequests] = useState<Request[]>([]);
+  const [privateRequests, setPrivateRequests] = useState<Request[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [verifications, setVerifications] = useState<Guide[]>([]);
@@ -80,24 +83,34 @@ export default function TravelDesk() {
   const refresh = async () => {
     try {
       if (user?.role === "tourist") {
-        const [guideData, requestData, offerData, bookingData] =
-          await Promise.all([
-            call<{ guides: Guide[] }>("/travel/guides", "GET"),
-            call<{ requests: Request[] }>("/travel/requests", "GET"),
-            call<{ offers: Offer[] }>("/travel/offers", "GET"),
-            call<{ bookings: Booking[] }>("/travel/bookings", "GET"),
-          ]);
-        setGuides(guideData.guides);
-        setRequests(requestData.requests);
-        setOffers(offerData.offers);
-        setBookings(bookingData.bookings);
-      } else if (user?.role === "guide") {
-        const [requestData, offerData, bookingData] = await Promise.all([
+        const [
+          guideData,
+          requestData,
+          privateRequestData,
+          offerData,
+          bookingData,
+        ] = await Promise.all([
+          call<{ guides: Guide[] }>("/travel/guides", "GET"),
           call<{ requests: Request[] }>("/travel/requests", "GET"),
+          call<{ requests: Request[] }>("/travel/private-requests", "GET"),
           call<{ offers: Offer[] }>("/travel/offers", "GET"),
           call<{ bookings: Booking[] }>("/travel/bookings", "GET"),
         ]);
+        setGuides(guideData.guides);
         setRequests(requestData.requests);
+        setPrivateRequests(privateRequestData.requests);
+        setOffers(offerData.offers);
+        setBookings(bookingData.bookings);
+      } else if (user?.role === "guide") {
+        const [requestData, privateRequestData, offerData, bookingData] =
+          await Promise.all([
+            call<{ requests: Request[] }>("/travel/requests", "GET"),
+            call<{ requests: Request[] }>("/travel/private-requests", "GET"),
+            call<{ offers: Offer[] }>("/travel/offers", "GET"),
+            call<{ bookings: Booking[] }>("/travel/bookings", "GET"),
+          ]);
+        setRequests(requestData.requests);
+        setPrivateRequests(privateRequestData.requests);
         setOffers(offerData.offers);
         setBookings(bookingData.bookings);
       } else if (user?.role === "admin") {
@@ -389,14 +402,111 @@ export default function TravelDesk() {
               </div>
             ))}
           </section>
+          <section className="rounded-xl border bg-card p-5">
+            <h2 className="mb-4 text-lg font-semibold">4. Private requests</h2>
+            {privateRequests.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Private requests sent to a specific guide will appear here.
+              </p>
+            ) : (
+              privateRequests.map((request) => (
+                <div className="mb-3 rounded-lg border p-3" key={request._id}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <b>{request.destination}</b>
+                    <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium capitalize">
+                      {request.status}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Sent privately to{" "}
+                    {request.guide?.username || "your selected guide"} ·{" "}
+                    {request.startDate.slice(0, 10)} to{" "}
+                    {request.endDate.slice(0, 10)}
+                  </p>
+                  <p className="mt-2 text-sm font-medium">
+                    Budget: NPR {request.budget ?? "Not specified"}
+                  </p>
+                </div>
+              ))
+            )}
+          </section>
         </>
       )}
 
       {user.role === "guide" && (
         <>
+          <section className="rounded-xl border border-primary/30 bg-primary/5 p-5">
+            <h2 className="mb-4 text-lg font-semibold">
+              1. Private requests for you
+            </h2>
+            {privateRequests.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Requests sent directly to you will appear here.
+              </p>
+            ) : (
+              privateRequests.map((request) => (
+                <div
+                  className="mb-3 rounded-lg border bg-card p-4"
+                  key={request._id}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">{request.destination}</p>
+                      <p className="text-sm text-muted-foreground">
+                        From {request.tourist?.username || "tourist"} ·{" "}
+                        {request.travelers} traveler(s) ·{" "}
+                        {request.startDate.slice(0, 10)} to{" "}
+                        {request.endDate.slice(0, 10)}
+                      </p>
+                      <p className="mt-2 text-sm font-medium">
+                        Budget: NPR {request.budget ?? "Not specified"}
+                      </p>
+                      {request.details && (
+                        <p className="mt-2 text-sm">{request.details}</p>
+                      )}
+                    </div>
+                    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium capitalize text-primary">
+                      {request.status}
+                    </span>
+                  </div>
+                  {request.status === "open" && (
+                    <div className="mt-4 flex gap-2">
+                      <Button
+                        onClick={() =>
+                          run(async () => {
+                            await patchData(
+                              `/travel/private-requests/${request._id}`,
+                              { status: "accepted" },
+                            );
+                            setMessage("Private travel request accepted");
+                          })
+                        }
+                      >
+                        Accept request
+                      </Button>
+                      <Button
+                        className="border border-gray-1 bg-background text-text-para"
+                        onClick={() =>
+                          run(async () => {
+                            await patchData(
+                              `/travel/private-requests/${request._id}`,
+                              { status: "rejected" },
+                            );
+                            setMessage("Request rejected and made public");
+                          })
+                        }
+                      >
+                        Reject and make public
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </section>
           <section className="rounded-xl border bg-card p-5">
             <h2 className="mb-4 text-lg font-semibold">
-              1. Create or update your guide profile
+              2. Create or update your guide profile
             </h2>
             <form onSubmit={saveProfile} className="grid gap-3 md:grid-cols-2">
               <input
@@ -454,7 +564,7 @@ export default function TravelDesk() {
           </section>
           <section className="rounded-xl border bg-card p-5">
             <h2 className="mb-4 text-lg font-semibold">
-              2. Open travel requests
+              3. Open travel requests
             </h2>
             {requests.map((request) => (
               <div
@@ -496,7 +606,7 @@ export default function TravelDesk() {
             ))}
           </section>
           <section className="rounded-xl border bg-card p-5">
-            <h2 className="mb-4 text-lg font-semibold">3. Confirmed trips</h2>
+            <h2 className="mb-4 text-lg font-semibold">4. Confirmed trips</h2>
             {bookings.map((booking) => (
               <div
                 className="mb-3 flex items-center justify-between rounded-lg border p-3"

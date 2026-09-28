@@ -6,17 +6,18 @@ import {
   Sparkles,
   Search,
   Compass,
-  Phone,
   Mail,
   Award,
   CheckCircle2,
-  Calendar,
   UserCheck,
+  X,
 } from "lucide-react";
 import { Card, CardContent } from "../../@/components/ui/card";
 import { Badge } from "../../@/components/ui/badge";
 import Button from "@/components/Button";
-import { fetchData } from "@/lib/api";
+import { fetchData, postData } from "@/lib/api";
+import { useStore } from "@/store/useStore";
+import { useNavigate } from "react-router";
 
 export interface GuideUser {
   id?: string;
@@ -93,10 +94,30 @@ const MOCK_GUIDES: GuideUser[] = [
 ];
 
 export default function Guides() {
+  const user = useStore((state) => state.user);
+  const navigate = useNavigate();
   const [guides, setGuides] = useState<GuideUser[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedGuide, setSelectedGuide] = useState<GuideUser | null>(null);
+  const [privateMessage, setPrivateMessage] = useState("");
+  const [isSubmittingPrivate, setIsSubmittingPrivate] = useState(false);
+  const [privateForm, setPrivateForm] = useState<{
+    destination: string;
+    startDate: string;
+    endDate: string;
+    travelers: number | "";
+    budget: string;
+    details: string;
+  }>({
+    destination: "",
+    startDate: "",
+    endDate: "",
+    travelers: "",
+    budget: "",
+    details: "",
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -105,14 +126,17 @@ export default function Guides() {
       try {
         setLoading(true);
         // GET /users endpoint via helper
-        const response = await fetchData<{ guides: GuideUser[]; message: string }>("/travel/guides");
-        
+        const response = await fetchData<{
+          guides: GuideUser[];
+          message: string;
+        }>("/travel/guides");
+
         const fetchedUsers = response.guides || [];
-        console.log(fetchedUsers)
-        
+        console.log(fetchedUsers);
+
         // Filter only users with "guide" role from API
-        const apiGuides = fetchedUsers
-console.log(apiGuides)
+        const apiGuides = fetchedUsers;
+        console.log(apiGuides);
         // Combine API guides with Mock guides (avoiding duplicates)
         const combinedGuides = [...apiGuides];
 
@@ -157,14 +181,68 @@ console.log(apiGuides)
     const query = searchQuery.toLowerCase();
     const nameMatch = guide.username?.toLowerCase().includes(query);
     const locationMatch = guide.location?.toLowerCase().includes(query);
-    const specMatch = guide.specialties?.some((s) => s.toLowerCase().includes(query));
+    const specMatch = guide.specialties?.some((s) =>
+      s.toLowerCase().includes(query),
+    );
     return nameMatch || locationMatch || specMatch;
   });
+
+  const openPrivateRequest = (guide: GuideUser) => {
+    if (user?.role !== "tourist") {
+      navigate("/auth");
+      return;
+    }
+    setPrivateMessage("");
+    setSelectedGuide(guide);
+  };
+
+  const closePrivateRequest = () => {
+    if (isSubmittingPrivate) return;
+    setSelectedGuide(null);
+  };
+
+  const submitPrivateRequest = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    const guideId = selectedGuide?.id || selectedGuide?._id;
+    if (!guideId || guideId.startsWith("demo-")) {
+      setPrivateMessage("This sample guide is not available for booking yet.");
+      return;
+    }
+
+    setIsSubmittingPrivate(true);
+    setPrivateMessage("");
+    try {
+      await postData("/travel/private-requests", {
+        guide: guideId,
+        ...privateForm,
+        budget: privateForm.budget ? Number(privateForm.budget) : undefined,
+      });
+      setPrivateMessage("Private request sent to this guide.");
+      setPrivateForm({
+        destination: "",
+        startDate: "",
+        endDate: "",
+        travelers: "",
+        budget: "",
+        details: "",
+      });
+      window.setTimeout(() => setSelectedGuide(null), 1200);
+    } catch (error) {
+      setPrivateMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not send private request.",
+      );
+    } finally {
+      setIsSubmittingPrivate(false);
+    }
+  };
 
   return (
     <div className="w-full min-h-screen bg-body-bg py-12 px-4 sm:px-6 lg:px-8 font-sans text-text-para">
       <div className="max-w-6xl mx-auto space-y-10">
-        
         {/* --- HEADER SECTION --- */}
         <div className="text-center space-y-4 max-w-2xl mx-auto">
           <Badge className="bg-primary/10 text-primary border border-primary/20 px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-wider">
@@ -177,7 +255,8 @@ console.log(apiGuides)
           </h2>
 
           <p className="text-text-muted text-base leading-relaxed">
-            Browse our directory of admin-verified local leaders ready to make your destination unforgettable.
+            Browse our directory of admin-verified local leaders ready to make
+            your destination unforgettable.
           </p>
 
           {/* Search Filter Bar */}
@@ -215,9 +294,12 @@ console.log(apiGuides)
             {filteredGuides.length === 0 ? (
               <div className="text-center py-16 bg-surface border border-gray-1 rounded-2xl space-y-3">
                 <Compass className="w-10 h-10 text-text-muted/50 mx-auto" />
-                <h3 className="text-base font-semibold text-text-header">No Guides Found</h3>
+                <h3 className="text-base font-semibold text-text-header">
+                  No Guides Found
+                </h3>
                 <p className="text-xs text-text-muted max-w-xs mx-auto">
-                  We couldn't find any guides matching "{searchQuery}". Try searching for another keyword.
+                  We couldn't find any guides matching "{searchQuery}". Try
+                  searching for another keyword.
                 </p>
               </div>
             ) : (
@@ -267,14 +349,20 @@ console.log(apiGuides)
 
                               <div className="flex items-center gap-1.5 text-xs text-text-muted mt-0.5">
                                 <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                                <span className="truncate">{guide.location || "Nepal Region"}</span>
+                                <span className="truncate">
+                                  {guide.location || "Nepal Region"}
+                                </span>
                               </div>
 
                               {/* Rating & Review Summary */}
                               <div className="flex items-center gap-2 mt-2">
                                 <div className="flex items-center gap-1 text-xs font-semibold text-text-header bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
                                   <Star className="w-3.5 h-3.5 fill-primary text-primary" />
-                                  <span>{guide.rating ? guide.rating.toFixed(1) : "5.0"}</span>
+                                  <span>
+                                    {guide.rating
+                                      ? guide.rating.toFixed(1)
+                                      : "5.0"}
+                                  </span>
                                 </div>
                                 <span className="text-xs text-text-muted">
                                   ({guide.reviewCount || 12} reviews)
@@ -291,18 +379,19 @@ console.log(apiGuides)
 
                           {/* Key Attributes / Tags */}
                           <div className="mt-4 space-y-2">
-                            {guide.specialties && guide.specialties.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5">
-                                {guide.specialties.map((spec, i) => (
-                                  <Badge
-                                    key={i}
-                                    className="bg-body-bg text-text-header border border-gray-1 text-[11px] font-normal px-2 py-0.5"
-                                  >
-                                    {spec}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
+                            {guide.specialties &&
+                              guide.specialties.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {guide.specialties.map((spec, i) => (
+                                    <Badge
+                                      key={i}
+                                      className="bg-body-bg text-text-header border border-gray-1 text-[11px] font-normal px-2 py-0.5"
+                                    >
+                                      {spec}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
 
                             <div className="flex items-center justify-between text-xs text-text-muted pt-2 border-t border-gray-1">
                               <span className="flex items-center gap-1">
@@ -311,7 +400,10 @@ console.log(apiGuides)
                               </span>
                               {guide.pricePerDay && (
                                 <span className="font-bold text-text-header">
-                                  ${guide.pricePerDay} <span className="text-[10px] font-normal text-text-muted">/ day</span>
+                                  NPR {guide.pricePerDay}{" "}
+                                  <span className="text-[10px] font-normal text-text-muted">
+                                    / day
+                                  </span>
                                 </span>
                               )}
                             </div>
@@ -320,15 +412,20 @@ console.log(apiGuides)
 
                         {/* Card Action Footer */}
                         <div className="pt-4 border-t border-gray-1 space-y-2">
-                          <Button className="w-full bg-primary hover:opacity-90 text-primary-foreground font-medium py-2 rounded-xl shadow-sm text-xs transition-all flex items-center justify-center gap-2">
+                          <Button
+                            onClick={() => openPrivateRequest(guide)}
+                            className="w-full bg-primary hover:opacity-90 text-primary-foreground font-medium py-2 rounded-xl shadow-sm text-xs transition-all flex items-center justify-center gap-2"
+                          >
                             <UserCheck className="w-3.5 h-3.5" />
-                            Book Custom Trip
+                            Book Travel with this Guide
                           </Button>
 
                           <div className="flex items-center justify-between text-[11px] text-text-muted px-1 pt-1">
                             <span className="flex items-center gap-1">
                               <Mail className="w-3 h-3 text-primary" />
-                              <span className="truncate max-w-[140px]">{guide.email}</span>
+                              <span className="truncate max-w-35">
+                                {guide.email}
+                              </span>
                             </span>
                             <span className="flex items-center gap-1">
                               <CheckCircle2 className="w-3 h-3 text-primary" />
@@ -354,7 +451,9 @@ console.log(apiGuides)
                 Are You a Licensed Local Guide?
               </h3>
               <p className="text-text-muted text-sm max-w-2xl leading-relaxed">
-                Join our growing network of certified leads. Complete your verification onboarding to start receiving direct tourist booking requests today.
+                Join our growing network of certified leads. Complete your
+                verification onboarding to start receiving direct tourist
+                booking requests today.
               </p>
             </div>
 
@@ -364,6 +463,145 @@ console.log(apiGuides)
           </div>
         </div>
 
+        {selectedGuide && (
+          <div
+            className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 px-4 py-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="private-request-title"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closePrivateRequest();
+            }}
+          >
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-1 bg-surface p-6 shadow-xl sm:p-8">
+              <div className="mb-6 flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                    Private travel request
+                  </p>
+                  <h2
+                    id="private-request-title"
+                    className="mt-2 text-2xl font-bold text-text-header"
+                  >
+                    Requesting travel with {selectedGuide.username}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-text-muted">
+                    Only this guide will see your request. If they reject it, it
+                    will become a public travel request for other guides.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closePrivateRequest}
+                  className="rounded-lg p-2 text-text-muted hover:bg-body-bg hover:text-text-header"
+                  aria-label="Close private travel request"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form
+                onSubmit={submitPrivateRequest}
+                className="grid gap-3 md:grid-cols-2"
+              >
+                <input
+                  required
+                  className="rounded-md border bg-body-bg p-2.5 text-sm"
+                  placeholder="Destination"
+                  value={privateForm.destination}
+                  onChange={(event) =>
+                    setPrivateForm({
+                      ...privateForm,
+                      destination: event.target.value,
+                    })
+                  }
+                />
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  className="rounded-md border bg-body-bg p-2.5 text-sm"
+                  placeholder="Number of travelers"
+                  value={privateForm.travelers}
+                  onChange={(event) =>
+                    setPrivateForm({
+                      ...privateForm,
+                      travelers: event.target.value
+                        ? Number(event.target.value)
+                        : "",
+                    })
+                  }
+                />
+                <label className="text-sm text-text-muted">
+                  Start date
+                  <input
+                    required
+                    type="date"
+                    className="mt-1.5 w-full rounded-md border bg-body-bg p-2.5 text-sm text-text-header"
+                    value={privateForm.startDate}
+                    onChange={(event) =>
+                      setPrivateForm({
+                        ...privateForm,
+                        startDate: event.target.value,
+                      })
+                    }
+                  />
+                </label>
+                <label className="text-sm text-text-muted">
+                  End date
+                  <input
+                    required
+                    type="date"
+                    className="mt-1.5 w-full rounded-md border bg-body-bg p-2.5 text-sm text-text-header"
+                    value={privateForm.endDate}
+                    onChange={(event) =>
+                      setPrivateForm({
+                        ...privateForm,
+                        endDate: event.target.value,
+                      })
+                    }
+                  />
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  className="rounded-md border bg-body-bg p-2.5 text-sm"
+                  placeholder="Budget in NPR (optional)"
+                  value={privateForm.budget}
+                  onChange={(event) =>
+                    setPrivateForm({
+                      ...privateForm,
+                      budget: event.target.value,
+                    })
+                  }
+                />
+                <input
+                  className="rounded-md border bg-body-bg p-2.5 text-sm"
+                  placeholder="Trip details"
+                  value={privateForm.details}
+                  onChange={(event) =>
+                    setPrivateForm({
+                      ...privateForm,
+                      details: event.target.value,
+                    })
+                  }
+                />
+                <div className="flex flex-wrap items-center gap-3 md:col-span-2">
+                  <Button type="submit" disabled={isSubmittingPrivate}>
+                    {isSubmittingPrivate
+                      ? "Sending..."
+                      : "Send private request"}
+                  </Button>
+                  {privateMessage && (
+                    <p className="text-sm text-text-muted" role="status">
+                      {privateMessage}
+                    </p>
+                  )}
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -58,11 +58,26 @@ router.post(
 
 router.get("/requests", async (req, res) => {
   const requests = await withUsers(
-    TravelRequest.find({ status: { $in: ["open", "offered"] } }).sort({
-      createdAt: -1,
-    }),
+    TravelRequest.find({
+      isPrivate: { $ne: true },
+      status: { $in: ["open", "offered"] },
+    }).sort({ createdAt: -1 }),
   );
   res.json({ message: "travel requests fetched successfully", requests });
+});
+
+router.get("/private-requests", verifyToken, async (req, res) => {
+  const filter =
+    req.user.role === "guide"
+      ? { guide: req.user._id, isPrivate: true }
+      : { tourist: req.user._id, isPrivate: true };
+  const requests = await withUsers(
+    TravelRequest.find(filter).sort({ createdAt: -1 }),
+  );
+  res.json({
+    message: "Private travel requests fetched successfully",
+    requests,
+  });
 });
 
 router.post(
@@ -90,6 +105,82 @@ router.post(
       details,
     });
     res.status(201).json({ request });
+  },
+);
+
+router.post(
+  "/private-requests",
+  verifyToken,
+  restrictTo("tourist"),
+  async (req, res) => {
+    const {
+      guide,
+      destination,
+      startDate,
+      endDate,
+      travelers,
+      budget,
+      details,
+    } = req.body;
+    if (!guide || !destination || !startDate || !endDate || !travelers)
+      return res.status(400).json({
+        message: "Guide, destination, dates, and travelers are required",
+      });
+    if (new Date(endDate) < new Date(startDate))
+      return res
+        .status(400)
+        .json({ message: "End date must be after start date" });
+    const selectedGuide = await User.findOne({
+      _id: guide,
+      role: "guide",
+      "guideProfile.verificationStatus": "verified",
+    });
+    if (!selectedGuide)
+      return res.status(404).json({ message: "Verified guide not found" });
+
+    const request = await TravelRequest.create({
+      tourist: req.user._id,
+      guide,
+      isPrivate: true,
+      destination,
+      startDate,
+      endDate,
+      travelers,
+      budget,
+      details,
+    });
+    res.status(201).json({ message: "Private travel request sent", request });
+  },
+);
+
+router.patch(
+  "/private-requests/:requestId",
+  verifyToken,
+  restrictTo("guide"),
+  async (req, res) => {
+    const { status } = req.body;
+    if (!["accepted", "rejected"].includes(status))
+      return res
+        .status(400)
+        .json({ message: "Status must be accepted or rejected" });
+
+    const request = await TravelRequest.findOne({
+      _id: req.params.requestId,
+      guide: req.user._id,
+      isPrivate: true,
+    });
+    if (!request)
+      return res.status(404).json({ message: "Private request not found" });
+
+    if (status === "rejected") {
+      request.isPrivate = false;
+      request.guide = undefined;
+      request.status = "open";
+    } else {
+      request.status = "accepted";
+    }
+    await request.save();
+    res.json({ message: `Private request ${status}`, request });
   },
 );
 
@@ -122,8 +213,12 @@ router.post(
         .status(403)
         .json({ message: "Your guide profile must be verified first" });
     const request = await TravelRequest.findById(req.params.requestId);
-    if (!request || !["open", "offered"].includes(request.status))
+    if (!request || !["open", "accepted", "offered"].includes(request.status))
       return res.status(404).json({ message: "Open request not found" });
+    if (request.isPrivate && !sameId(request.guide, req.user._id))
+      return res
+        .status(403)
+        .json({ message: "This private request is for another guide" });
     const { price, message = "" } = req.body;
     if (price === undefined)
       return res.status(400).json({ message: "Offer price is required" });
