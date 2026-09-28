@@ -38,7 +38,6 @@ export interface GuideUser {
   pricePerDay?: number;
 }
 
-// Demo Mock Data to append along with API results
 const MOCK_GUIDES: GuideUser[] = [
   {
     _id: "demo-guide-1",
