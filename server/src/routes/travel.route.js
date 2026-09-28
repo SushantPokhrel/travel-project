@@ -56,7 +56,7 @@ router.post(
   },
 );
 
-router.get("/requests", verifyToken, async (req, res) => {
+router.get("/requests", async (req, res) => {
   const requests = await withUsers(
     TravelRequest.find({ status: { $in: ["open", "offered"] } }).sort({
       createdAt: -1,

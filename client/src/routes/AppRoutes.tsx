@@ -15,6 +15,7 @@ import Guides from "@/pages/Guides";
 import TravelDesk from "@/pages/TravelDesk";
 import AdminManageUsers from "@/pages/AdminManageUsers";
 import AdminVerifications from "@/pages/AdminVerifications";
+import Templates from "@/pages/Templates";
 import AdminRoutes from "./AdminRoutes";
 export default function AppRoutes() {
   return (
@@ -26,6 +27,7 @@ export default function AppRoutes() {
             <Route path="/" element={<Home />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/guides" element={<Guides />} />
+            <Route path="/templates" element={<Templates />} />
             <Route element={<PublicRoutes />}>
               <Route path="/auth" element={<Auth />} />
             </Route>
