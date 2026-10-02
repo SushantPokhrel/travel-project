@@ -46,7 +46,10 @@ type Booking = {
   request?: Request;
   guide?: Guide;
 };
-
+type OfferPrices = {
+  requestId: string;
+  offerPrice: string;
+};
 const call = async <T,>(
   path: string,
   method: "GET" | "POST",
@@ -63,6 +66,8 @@ export default function TravelDesk() {
   const [verifications, setVerifications] = useState<Guide[]>([]);
   const [query, setQuery] = useState("");
   const [message, setMessage] = useState("");
+  const [offerPrices, setOfferPrices] = useState<OfferPrices[] | []>([]);
+
   const [requestForm, setRequestForm] = useState({
     destination: "",
     startDate: "",
@@ -78,8 +83,7 @@ export default function TravelDesk() {
     specialties: "",
     pricePerDay: "",
   });
-  const [offerPrice, setOfferPrice] = useState<number | string>("");
-
+  console.log(offerPrices);
   const refresh = async () => {
     try {
       if (user?.role === "tourist") {
@@ -184,6 +188,9 @@ export default function TravelDesk() {
       .includes(query.toLowerCase()),
   );
   console.log(requests);
+  const getPrice = (req_id: string) => {
+    return offerPrices.find((item) => item.requestId === req_id)?.offerPrice;
+  };
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
       <div>
@@ -566,44 +573,69 @@ export default function TravelDesk() {
             <h2 className="mb-4 text-lg font-semibold">
               3. Open travel requests
             </h2>
-            {requests.map((request) => (
-              <div
-                className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-                key={request._id}
-              >
-                <span>
-                  <b>{request.destination}</b> · {request.travelers} traveler(s)
-                  · {request.startDate.slice(0, 10)} · {request.status} · NPR{" "}
-                  {request.budget}
-                </span>
-                <div className="flex gap-2">
-                  <input
-                    className="w-28 rounded-md border bg-background p-2"
-                    type="number"
-                    min="0"
-                    placeholder="Your price"
-                    value={offerPrice || ""}
-                    onChange={(e) => {
-                      setOfferPrice(e.target.valueAsNumber);
-                    }}
-                  />
-                  <Button
-                    onClick={() =>
-                      run(async () => {
-                        await call(
-                          `/travel/requests/${request._id}/offers`,
-                          "POST",
-                          { price: offerPrice },
-                        );
-                        setMessage("Offer submitted");
-                      })
-                    }
-                  >
-                    Send offer
-                  </Button>
+            {requests.map((request) => {
+              const currentPrice = getPrice(request._id);
+              return (
+                <div
+                  className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                  key={request._id}
+                >
+                  <span>
+                    <b>{request.destination}</b> · {request.travelers}{" "}
+                    traveler(s) · {request.startDate.slice(0, 10)} ·{" "}
+                    {request.status} · NPR {request.budget}
+                  </span>
+                  <div className="flex gap-2">
+                    <input
+                      className="w-28 rounded-md border bg-background p-2"
+                      type="number"
+                      min="0"
+                      placeholder="Your price"
+                      value={currentPrice || ""}
+                      onChange={(e) => {
+                        setOfferPrices((prev) => {
+                          const foundItem = prev.find(
+                            (item) => item.requestId === request._id,
+                          );
+                          if (!foundItem) {
+                            return [
+                              ...prev,
+                              {
+                                requestId: request._id,
+                                offerPrice: e.target.value,
+                              },
+                            ];
+                          }
+                          return prev.map((item) =>
+                            item.requestId === request._id
+                              ? { ...item, offerPrice: e.target.value }
+                              : item,
+                          );
+                        });
+                      }}
+                    />
+                    <Button
+                      onClick={() =>
+                        run(async () => {
+                          await call(
+                            `/travel/requests/${request._id}/offers`,
+                            "POST",
+                            {
+                              price: offerPrices.find(
+                                (item) => item.requestId === request._id,
+                              )?.offerPrice,
+                            },
+                          );
+                          setMessage("Offer submitted");
+                        })
+                      }
+                    >
+                      Send offer
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </section>
           <section className="rounded-xl border bg-card p-5">
             <h2 className="mb-4 text-lg font-semibold">4. Confirmed trips</h2>
