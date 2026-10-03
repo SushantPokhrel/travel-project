@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
-import { ArrowRight, MapPin, ShieldCheck, Users } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { ArrowRight, MapPin, ShieldCheck, Users, X } from "lucide-react";
 import { Badge } from "../../@/components/ui/badge";
 import { Card, CardContent } from "../../@/components/ui/card";
-import { fetchData } from "@/lib/api";
+import Button from "@/components/Button";
+import { fetchData, postData } from "@/lib/api";
+import { useStore } from "@/store/useStore";
+import { useNavigate } from "react-router";
 
 type Guide = {
   _id?: string;
@@ -23,6 +26,15 @@ type TravelTemplate = {
   description: string;
   image: string;
   keywords: string[];
+};
+
+type BookingForm = {
+  destination: string;
+  startDate: string;
+  endDate: string;
+  travelers: number | "";
+  budget: string;
+  details: string;
 };
 
 const TEMPLATES: TravelTemplate[] = [
@@ -86,15 +98,100 @@ const guideMatchesTemplate = (guide: Guide, template: TravelTemplate) => {
 };
 
 export default function Templates() {
+  const user = useStore((state) => state.user);
+  const navigate = useNavigate();
   const [guides, setGuides] = useState<Guide[]>([]);
   const [loading, setLoading] = useState(true);
+  const [guideLoadError, setGuideLoadError] = useState("");
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<TravelTemplate | null>(null);
+  const [selectedGuideId, setSelectedGuideId] = useState("");
+  const [bookingMessage, setBookingMessage] = useState("");
+  const [bookingSubmitted, setBookingSubmitted] = useState(false);
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+  const [bookingForm, setBookingForm] = useState<BookingForm>({
+    destination: "",
+    startDate: "",
+    endDate: "",
+    travelers: 1,
+    budget: "",
+    details: "",
+  });
 
   useEffect(() => {
     fetchData<{ guides: Guide[] }>("/travel/guides")
       .then((data) => setGuides(data.guides || []))
-      .catch(() => setGuides([]))
+      .catch(() => {
+        setGuides([]);
+        setGuideLoadError("Could not load the verified guide list.");
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  const openBooking = (template: TravelTemplate) => {
+    if (user?.role !== "tourist") {
+      navigate("/auth");
+      return;
+    }
+
+    setBookingMessage("");
+    setBookingSubmitted(false);
+    setSelectedGuideId("");
+    setBookingForm({
+      destination: template.region,
+      startDate: "",
+      endDate: "",
+      travelers: 1,
+      budget: "",
+      details: `${template.title}. ${template.description}`,
+    });
+    setSelectedTemplate(template);
+  };
+
+  const closeBooking = () => {
+    if (isSubmittingBooking) return;
+    setSelectedTemplate(null);
+  };
+
+  const submitBooking = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSubmittingBooking(true);
+    setBookingMessage("");
+
+    const payload = {
+      ...bookingForm,
+      budget: bookingForm.budget ? Number(bookingForm.budget) : undefined,
+    };
+
+    try {
+      if (selectedGuideId) {
+        await postData("/travel/private-requests", {
+          ...payload,
+          guide: selectedGuideId,
+        });
+        setBookingMessage("Your request has been sent to the selected guide.");
+      } else {
+        await postData("/travel/requests", payload);
+        setBookingMessage(
+          "Your travel request is posted for available guides to respond.",
+        );
+      }
+      setBookingSubmitted(true);
+    } catch (error) {
+      setBookingMessage(
+        error instanceof Error ? error.message : "Could not submit your request.",
+      );
+    } finally {
+      setIsSubmittingBooking(false);
+    }
+  };
+
+  const matchingBookingGuides = selectedTemplate
+    ? guides.filter((guide) => guideMatchesTemplate(guide, selectedTemplate))
+    : [];
+  const bookingGuides = matchingBookingGuides.length
+    ? matchingBookingGuides
+    : guides;
 
   return (
     <div className="min-h-screen bg-body-bg px-4 py-10 text-text-para sm:px-6 lg:px-8">
@@ -200,12 +297,213 @@ export default function Templates() {
                     <ShieldCheck className="h-4 w-4 text-primary" />
                     Admin-verified local experts
                   </div>
+                  <Button
+                    className="w-full rounded-xl py-3 text-sm font-semibold"
+                    onClick={() => openBooking(template)}
+                  >
+                    Book this trip
+                  </Button>
                 </CardContent>
               </Card>
             );
           })}
         </section>
       </div>
+      {selectedTemplate && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 px-4 py-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="template-booking-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeBooking();
+          }}
+        >
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-1 bg-surface p-6 shadow-xl sm:p-8">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                  Trip booking
+                </p>
+                <h2
+                  id="template-booking-title"
+                  className="mt-2 text-2xl font-bold text-text-header"
+                >
+                  Book {selectedTemplate.title}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-text-muted">
+                  Share your trip details, then choose a guide or leave it open
+                  for available guides to respond.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeBooking}
+                className="rounded-lg p-2 text-text-muted hover:bg-body-bg hover:text-text-header"
+                aria-label="Close booking form"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={submitBooking} className="grid gap-3 md:grid-cols-2">
+              <label className="text-sm text-text-muted md:col-span-2">
+                Destination
+                <input
+                  required
+                  className="mt-1.5 w-full rounded-md border bg-body-bg p-2.5 text-sm text-text-header"
+                  value={bookingForm.destination}
+                  onChange={(event) =>
+                    setBookingForm({
+                      ...bookingForm,
+                      destination: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label className="text-sm text-text-muted">
+                Start date
+                <input
+                  required
+                  type="date"
+                  className="mt-1.5 w-full rounded-md border bg-body-bg p-2.5 text-sm text-text-header"
+                  value={bookingForm.startDate}
+                  onChange={(event) =>
+                    setBookingForm({
+                      ...bookingForm,
+                      startDate: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label className="text-sm text-text-muted">
+                End date
+                <input
+                  required
+                  type="date"
+                  min={bookingForm.startDate}
+                  className="mt-1.5 w-full rounded-md border bg-body-bg p-2.5 text-sm text-text-header"
+                  value={bookingForm.endDate}
+                  onChange={(event) =>
+                    setBookingForm({
+                      ...bookingForm,
+                      endDate: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label className="text-sm text-text-muted">
+                Number of travelers
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  className="mt-1.5 w-full rounded-md border bg-body-bg p-2.5 text-sm text-text-header"
+                  value={bookingForm.travelers}
+                  onChange={(event) =>
+                    setBookingForm({
+                      ...bookingForm,
+                      travelers: event.target.value
+                        ? Number(event.target.value)
+                        : "",
+                    })
+                  }
+                />
+              </label>
+              <label className="text-sm text-text-muted">
+                Budget in NPR (optional)
+                <input
+                  type="number"
+                  min="0"
+                  className="mt-1.5 w-full rounded-md border bg-body-bg p-2.5 text-sm text-text-header"
+                  value={bookingForm.budget}
+                  onChange={(event) =>
+                    setBookingForm({
+                      ...bookingForm,
+                      budget: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label className="text-sm text-text-muted md:col-span-2">
+                Trip details
+                <textarea
+                  rows={3}
+                  className="mt-1.5 w-full rounded-md border bg-body-bg p-2.5 text-sm text-text-header"
+                  value={bookingForm.details}
+                  onChange={(event) =>
+                    setBookingForm({
+                      ...bookingForm,
+                      details: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label className="text-sm text-text-muted md:col-span-2">
+                Choose a verified guide (optional)
+                <select
+                  className="mt-1.5 w-full rounded-md border bg-body-bg p-2.5 text-sm text-text-header"
+                  value={selectedGuideId}
+                  onChange={(event) => setSelectedGuideId(event.target.value)}
+                  disabled={loading}
+                >
+                  <option value="">
+                    {loading
+                        ? "Loading guides..."
+                        : "No preference — let available guides respond"}
+                    </option>
+                    {bookingGuides.map((guide) => {
+                      const guideId = guide._id || guide.id;
+                      return guideId ? (
+                        <option key={guideId} value={guideId}>
+                          {guide.username}
+                          {guide.guideProfile?.location
+                            ? ` — ${guide.guideProfile.location}`
+                            : ""}
+                        </option>
+                      ) : null;
+                    })}
+                </select>
+              </label>
+              {guideLoadError && (
+                <p className="text-sm text-text-muted md:col-span-2" role="status">
+                    {guideLoadError} You can still submit a request for available
+                    guides to respond.
+                </p>
+              )}
+              {bookingMessage && (
+                <p
+                  className="text-sm text-text-muted md:col-span-2"
+                  role="status"
+                >
+                  {bookingMessage}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-3 pt-2 md:col-span-2">
+                <Button
+                  type="submit"
+                  disabled={isSubmittingBooking || loading || bookingSubmitted}
+                  className="rounded-xl px-6"
+                >
+                  {isSubmittingBooking
+                    ? "Submitting..."
+                    : bookingSubmitted
+                      ? "Request submitted"
+                      : "Submit trip request"}
+                </Button>
+                {bookingMessage && !isSubmittingBooking && (
+                  <Button
+                    className="rounded-xl border border-gray-1 bg-surface px-6 text-text-header hover:bg-body-bg"
+                    onClick={closeBooking}
+                  >
+                    Close
+                  </Button>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

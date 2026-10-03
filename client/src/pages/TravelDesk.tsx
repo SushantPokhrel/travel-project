@@ -54,7 +54,16 @@ const call = async <T,>(
   path: string,
   method: "GET" | "POST",
   body?: unknown,
-) => (method === "GET" ? fetchData<T>(path) : postData<unknown, T>(path, body));
+) => {
+  try {
+    return method === "GET"
+      ? await fetchData<T>(path)
+      : await postData<unknown, T>(path, body);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Request failed";
+    throw new Error(`${path}: ${message}`, { cause: error });
+  }
+};
 
 export default function TravelDesk() {
   const user = useStore((state) => state.user);

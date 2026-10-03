@@ -60,7 +60,26 @@ export const fetchData = async <ReturnType>(
   const res = await fetch(`${API_BASE_URL}${path}`, {
     credentials: "include",
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error("Could not fetch data");
-  return data;
+  if (!res.ok) {
+    const body = await res.text();
+    let message: string | undefined;
+    if (body) {
+      try {
+        const errorData: unknown = JSON.parse(body);
+        if (
+          typeof errorData === "object" &&
+          errorData !== null &&
+          "message" in errorData &&
+          typeof errorData.message === "string"
+        ) {
+          message = errorData.message;
+        }
+      } catch {
+        // Non-JSON error bodies fall back to the HTTP status.
+      }
+    }
+    const status = `${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
+    throw new Error(message || `Request failed (${status})`);
+  }
+  return res.json();
 };
