@@ -1,6 +1,5 @@
 import { useStore } from "@/store/useStore";
-import React from "react";
-import { Navigate, Outlet,useLocation } from "react-router";
+import { Navigate, Outlet, useLocation } from "react-router";
 import { Spinner } from "../../@/components/ui/spinner";
 export default function ProtectedRoutes() {
   const user = useStore((state) => state.user);

@@ -5,7 +5,6 @@ import guideNepalLogo from "@/assets/guideNepal_logo.jpg";
 import { postData } from "@/lib/api";
 import type { CredentialResponseType, LoginResponseType } from "@/lib/types";
 import { useStore } from "@/store/useStore";
-import { Spinner } from "../../@/components/ui/spinner";
 
 export default function Auth() {
   const setUser = useStore((state) => state.setUser);

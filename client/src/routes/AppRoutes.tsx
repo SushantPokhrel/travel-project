@@ -11,6 +11,8 @@ import ProtectedRoutes from "./Protected";
 import OnboardingRoute from "./OnboardingRoute";
 import Onboarding from "@/pages/Onboarding";
 import HowItWorks from "@/pages/HowItWorks";
+import About from "@/pages/About";
+import Contact from "@/pages/Contact";
 import Guides from "@/pages/Guides";
 import TravelDesk from "@/pages/TravelDesk";
 import AdminManageUsers from "@/pages/AdminManageUsers";
@@ -26,6 +28,8 @@ export default function AppRoutes() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/guides" element={<Guides />} />
             <Route path="/templates" element={<Templates />} />
             <Route element={<PublicRoutes />}>

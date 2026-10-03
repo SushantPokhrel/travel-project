@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useStore } from "@/store/useStore";
 import {
   User,
@@ -9,21 +9,13 @@ import {
   MapPin,
   Edit3,
   CheckCircle2,
-  Clock,
   Award,
   FileText,
   Camera,
   Compass,
 } from "lucide-react";
 import Button from "@/components/Button";
-import { Badge } from "../../@/components/ui/badge"; // or your UI library badge
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "../../@/components/ui/card";
+import { Badge } from "../../@/components/ui/badge";
 
 export default function DashboardIndex() {
   const user = useStore((state) => state.user);

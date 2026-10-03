@@ -4,7 +4,7 @@ require("dotenv").config({
 });
 const seedUsers = async () => {
   const adminCount = await User.countDocuments({ role: "admin" });
-  if (adminCount == 1) {
+  if (adminCount == 3) {
     return;
   }
   const insertedUser = await User.insertOne({
